@@ -1,6 +1,8 @@
 package com.yupi.yunpicturebackend.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -8,9 +10,11 @@ import com.yupi.yunpicturebackend.constant.UserConstant;
 import com.yupi.yunpicturebackend.exception.BusinessException;
 import com.yupi.yunpicturebackend.exception.ErrorCode;
 import com.yupi.yunpicturebackend.exception.ThrowUtils;
+import com.yupi.yunpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.yunpicturebackend.model.entity.User;
 import com.yupi.yunpicturebackend.model.enums.UserRoleEnum;
 import com.yupi.yunpicturebackend.model.vo.LoginUserVO;
+import com.yupi.yunpicturebackend.model.vo.UserVO;
 import com.yupi.yunpicturebackend.service.UserService;
 import com.yupi.yunpicturebackend.mapper.UserMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
 * @author 12600kf
@@ -95,6 +102,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
+    public User getLoginUser(HttpServletRequest request) {
+        Object userobj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        User currentUser = (User) userobj;
+        if (currentUser == null||currentUser.getId()==null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }//上面是走缓存查的，如果缓存的数据没有更新到数据库里面的话就会有信息差，所以下面还要再查一次数据库
+        //从数据库再查一遍
+        long userId = currentUser.getId();
+        //使用数据库查询
+        currentUser=this.getById(userId);
+        if (currentUser==null){
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+        return currentUser;
+    }
+
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+        Object userobj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        if (userobj==null){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR,"操作失败");
+        }
+        request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+        return true;
+    }
+
+    @Override
     public String getEncryptPassword(String userPassword) {
         //使用md5单向加密，如果对称加密会使得对手知道密钥破解密码。同时使用加盐的操作混淆加密
         final String salt="yupi";
@@ -109,6 +143,47 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
          LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtil.copyProperties(user,loginUserVO);
         return loginUserVO ;
+    }
+
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user==null){
+            return null;
+        }
+        UserVO UserVO = new UserVO();
+        BeanUtil.copyProperties(user,UserVO);
+        return UserVO ;
+    }
+
+    @Override
+    public List<UserVO> getUserVOList(List<User> userLsit) {
+        if (CollUtil.isEmpty(userLsit)){
+            return null;
+        }
+        return userLsit.stream().map(this::getUserVO).collect(Collectors.toList());
+    }
+
+    @Override
+    public QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if(userQueryRequest==null){
+            throw new BusinessException(ErrorCode.PARAMS_ERROR,"请求参数为空");
+        }
+        //取出所有属性值
+        Long id = userQueryRequest.getId();
+        String userName = userQueryRequest.getUserName();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq(ObjUtil.isNotNull(id),"id",id);
+        queryWrapper.eq(StrUtil.isNotBlank(userRole),"userRole",userRole);
+        queryWrapper.like(StrUtil.isNotBlank(userName),"userName",userName);
+        queryWrapper.like(StrUtil.isNotBlank(userAccount),"userAccount",userAccount);
+        queryWrapper.like(StrUtil.isNotBlank(userProfile),"userProfile",userProfile);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField),sortOrder.equals("ascend"),sortField);
+        return queryWrapper;
     }
 }
 
