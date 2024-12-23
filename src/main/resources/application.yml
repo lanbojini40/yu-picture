@@ -10,6 +10,10 @@ spring:
     url: jdbc:mysql://localhost:3306/yu_picture
     username: root
     password: 123456
+    #开放更大的文件上传体积
+  servlet:
+    multipart:
+      max-file-size: 10MB
     #配置文件里的数据库名称一定要和创建的数据库的名保持一致啊！！！不然在前端传入数据到后端的数据库的时候按照的是配置文件中的数据库名寻找的数据库！！十五分钟解决的问题
 mybatis-plus:
   configuration:
