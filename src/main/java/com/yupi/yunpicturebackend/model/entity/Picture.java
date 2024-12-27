@@ -110,12 +110,15 @@ public class Picture implements Serializable {
      * 编辑时间
      */
     private Date editTime;
+    /**
+     * 图片主色调
+     */
+    private String picColor;
 
     /**
      * 更新时间
      */
     private Date updateTime;
-
     /**
      * 是否删除
      */
