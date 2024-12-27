@@ -11,12 +11,12 @@ import com.yupi.yunpicturebackend.exception.BusinessException;
 import com.yupi.yunpicturebackend.exception.ErrorCode;
 import com.yupi.yunpicturebackend.manager.CosManager;
 import lombok.extern.slf4j.Slf4j;
-import org.jcp.xml.dsig.internal.dom.Utils;
+//import org.jcp.xml.dsig.internal.dom.Utils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.rmi.CORBA.Util;
+//import javax.rmi.CORBA.Util;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;

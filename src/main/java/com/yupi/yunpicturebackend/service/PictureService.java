@@ -3,15 +3,13 @@ package com.yupi.yunpicturebackend.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.yupi.yunpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.yupi.yunpicturebackend.model.dto.picture.PictureReviewRequest;
-import com.yupi.yunpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
-import com.yupi.yunpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.yupi.yunpicturebackend.model.dto.picture.*;
 import com.yupi.yunpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.yunpicturebackend.model.entity.Picture;
 import com.yupi.yunpicturebackend.model.entity.User;
 import com.yupi.yunpicturebackend.model.vo.PictureVO;
 import com.yupi.yunpicturebackend.model.vo.UserVO;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
@@ -74,5 +72,18 @@ public interface PictureService extends IService<Picture> {
      * @param loginUser
      * @return 成功创建的图片数
      */
+
     Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
+    /**
+     * 清除一个图片,清除的是一个cos对象存储的图片
+     * @param oldPicture
+     */
+    @Async
+    void clearPictureFile(Picture oldPicture);
+    void checkPictureAuth(User loginUser, Picture picture);
+
+
+    void deletePicture(long pictureId, User loginUser);
+
+    void editPicture(PictureEditRequest pictureEditRequest, User loginUser);
 }
