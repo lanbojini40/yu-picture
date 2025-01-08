@@ -10,6 +10,7 @@ import com.yupi.yunpicturebackend.constant.UserConstant;
 import com.yupi.yunpicturebackend.exception.BusinessException;
 import com.yupi.yunpicturebackend.exception.ErrorCode;
 import com.yupi.yunpicturebackend.exception.ThrowUtils;
+import com.yupi.yunpicturebackend.manager.auth.StpKit;
 import com.yupi.yunpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.yunpicturebackend.model.entity.User;
 import com.yupi.yunpicturebackend.model.enums.UserRoleEnum;
@@ -25,6 +26,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.yupi.yunpicturebackend.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
 * @author 12600kf
@@ -96,14 +99,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             log.info("user login failed,userAccount can not match userPassword");
             throw new  BusinessException(ErrorCode.PARAMS_ERROR,"用户不存在或者密码错误");
         }
-        //4.保存用户的登录态 根据请求拿到独立的用户空间，然后设置登录态
-        request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE,user);
+        // 4. 记录用户的登录态
+        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+// 5. 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
+        StpKit.SPACE.login(user.getId());
+        StpKit.SPACE.getSession().set(USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }
 
     @Override
     public User getLoginUser(HttpServletRequest request) {
-        Object userobj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        Object userobj = request.getSession().getAttribute(USER_LOGIN_STATE);
         User currentUser = (User) userobj;
         if (currentUser == null||currentUser.getId()==null){
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
@@ -120,11 +126,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public boolean userLogout(HttpServletRequest request) {
-        Object userobj = request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+        Object userobj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userobj==null){
             throw new BusinessException(ErrorCode.OPERATION_ERROR,"操作失败");
         }
-        request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+        request.getSession().removeAttribute(USER_LOGIN_STATE);
         return true;
     }
 

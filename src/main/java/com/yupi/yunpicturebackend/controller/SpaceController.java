@@ -13,6 +13,7 @@ import com.yupi.yunpicturebackend.constant.UserConstant;
 import com.yupi.yunpicturebackend.exception.BusinessException;
 import com.yupi.yunpicturebackend.exception.ErrorCode;
 import com.yupi.yunpicturebackend.exception.ThrowUtils;
+import com.yupi.yunpicturebackend.manager.auth.SpaceUserAuthManager;
 import com.yupi.yunpicturebackend.model.dto.space.*;
 import com.yupi.yunpicturebackend.model.entity.Space;
 import com.yupi.yunpicturebackend.model.entity.User;
@@ -22,6 +23,7 @@ import com.yupi.yunpicturebackend.service.SpaceService;
 import com.yupi.yunpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.DigestUtils;
@@ -44,6 +46,8 @@ public class SpaceController {
    private UserService userService;
     @Resource
     private SpaceService spaceService;
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     //@RequestBody主要用来接收前端传递给后端的json字符串中的数据的(请求体中的数据的)；而最常用的使用请求体传参的无疑是POST请求了，接收的是对象
     // 所以使用@RequestBody接收数据时，一般都用POST方式进行提交。在后端的同一个接收方法里，@RequestBody与@RequestParam()可以同时使用，@RequestBody最多只能有一个，而@RequestParam()可以有多个。
@@ -126,8 +130,12 @@ public class SpaceController {
         // 查询数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
+        SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
-        return ResultUtils.success(spaceService.getSpaceVO(space, request));
+        return ResultUtils.success(spaceVO);
     }
 
     /**

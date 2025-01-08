@@ -10,12 +10,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.yunpicturebackend.exception.BusinessException;
 import com.yupi.yunpicturebackend.exception.ErrorCode;
 import com.yupi.yunpicturebackend.exception.ThrowUtils;
+//import com.yupi.yunpicturebackend.manager.sharding.DynamicShardingManager;
+import com.yupi.yunpicturebackend.manager.sharding.DynamicShardingManager;
 import com.yupi.yunpicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.yunpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.yupi.yunpicturebackend.model.entity.Picture;
 import com.yupi.yunpicturebackend.model.entity.Space;
+import com.yupi.yunpicturebackend.model.entity.SpaceUser;
 import com.yupi.yunpicturebackend.model.entity.User;
 import com.yupi.yunpicturebackend.model.enums.SpaceLevelEnum;
+import com.yupi.yunpicturebackend.model.enums.SpaceRoleEnum;
 import com.yupi.yunpicturebackend.model.enums.SpaceTypeEnum;
 import com.yupi.yunpicturebackend.model.enums.UserRoleEnum;
 import com.yupi.yunpicturebackend.model.vo.PictureVO;
@@ -23,9 +27,12 @@ import com.yupi.yunpicturebackend.model.vo.SpaceVO;
 import com.yupi.yunpicturebackend.model.vo.UserVO;
 import com.yupi.yunpicturebackend.service.SpaceService;
 import com.yupi.yunpicturebackend.mapper.SpaceMapper;
+import com.yupi.yunpicturebackend.service.SpaceUserService;
 import com.yupi.yunpicturebackend.service.UserService;
 import org.bouncycastle.pqc.math.linearalgebra.IntUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -54,6 +61,11 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
      */
     @Resource
     private TransactionTemplate transactionTemplate;
+    @Resource
+    private SpaceUserService spaceUserService;
+    //@Resource
+    //@Lazy
+    //private DynamicShardingManager dynamicShardingManager;
 
     @Override
     public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {
@@ -103,6 +115,17 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 // 写入数据库
                 boolean result = this.save(space);
                 ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+                   // 如果是团队空间，关联新增团队成员记录 ,也就是把当前创建者的成员信息加入到团队成员表中
+                if (SpaceTypeEnum.TEAM.getValue() == spaceAddRequest.getSpaceType()) {
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setUserId(userId);
+                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建团队成员记录失败");
+                }
+                //为团队空间创建分表
+              //  dynamicShardingManager.createSpacePictureTable(space);
                 // 返回新写入的数据 id
                 return space.getId();
             });
